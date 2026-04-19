@@ -51,6 +51,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const whereStr = whereClauses.join(' AND ');
 
+      const limitIdx = paramIdx;
+      const offsetIdx = paramIdx + 1;
+      params.push(limitNum, offset);
+
       const queryStr = `
         SELECT
           el.id, el.address, el.provider, el.age_label, el.price,
@@ -64,9 +68,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         JOIN users u ON u.id = el.seller_id
         WHERE ${whereStr}
         ORDER BY ${orderBy}
-        LIMIT $${paramIdx++} OFFSET $${paramIdx++}
+        LIMIT $${limitIdx} OFFSET $${offsetIdx}
       `;
-      params.push(limitNum, offset);
 
       const countStr = `
         SELECT COUNT(*) FROM email_listings el
