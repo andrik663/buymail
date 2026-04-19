@@ -1,0 +1,169 @@
+import { Link, useNavigate } from 'react-router-dom';
+import { Menu, X, LogOut, User, Settings, Bell, MessageSquare } from 'lucide-react';
+import { useState } from 'react';
+import { useApp } from '../contexts/AppContext';
+
+export default function Header() {
+  const navigate = useNavigate();
+  const { user, logout, chats } = useApp();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+
+  const unreadChats = chats.filter(c => c.unreadCount > 0).length;
+  const totalUnreadMessages = chats.reduce((sum, c) => sum + c.unreadCount, 0);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  return (
+    <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-lg">E</span>
+            </div>
+            <span className="text-xl font-bold text-slate-900">EmailMarket</span>
+          </Link>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-8">
+            <Link to="/" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">
+              Beranda
+            </Link>
+            <Link to="/search" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">
+              Cari Email
+            </Link>
+            <a href="#" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">
+              Cara Kerja
+            </a>
+            <a href="#" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">
+              FAQ
+            </a>
+          </nav>
+
+          {/* Right Section */}
+          <div className="flex items-center gap-4">
+            {user ? (
+              <>
+                {/* Chat Icon */}
+                <button
+                  onClick={() => navigate('/inbox')}
+                  className="relative p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                  title="Chat"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  {totalUnreadMessages > 0 && (
+                    <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                      {totalUnreadMessages}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notification Icon */}
+                <button
+                  className="relative p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                  title="Notifikasi"
+                >
+                  <Bell className="w-5 h-5" />
+                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                </button>
+
+                {/* Profile Menu */}
+                <div className="relative">
+                  <button
+                    onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                    className="flex items-center gap-2 p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                  >
+                    <img
+                      src={user.avatar || 'https://via.placeholder.com/32'}
+                      alt={user.name}
+                      className="w-8 h-8 rounded-full"
+                    />
+                    <span className="hidden sm:inline text-sm font-medium text-slate-900">{user.name}</span>
+                  </button>
+
+                  {profileMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-2 z-50">
+                      <Link
+                        to={user.role === 'seller' ? '/dashboard/seller' : '/dashboard/buyer'}
+                        className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        <User className="w-4 h-4" />
+                        <span>Dashboard</span>
+                      </Link>
+                      <Link
+                        to={user.role === 'seller' ? '/dashboard/seller?tab=settings' : '/dashboard/buyer?tab=settings'}
+                        className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        <Settings className="w-4 h-4" />
+                        <span>Pengaturan</span>
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Logout</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => navigate('/login')}
+                  className="text-slate-600 hover:text-slate-900 font-medium transition-colors"
+                >
+                  Masuk
+                </button>
+                <button
+                  onClick={() => navigate('/register')}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Daftar
+                </button>
+              </>
+            )}
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Navigation */}
+        {mobileMenuOpen && (
+          <nav className="md:hidden py-4 border-t border-slate-200 space-y-2">
+            <Link
+              to="/"
+              className="block px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              Beranda
+            </Link>
+            <Link
+              to="/search"
+              className="block px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              Cari Email
+            </Link>
+            <a href="#" className="block px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+              Cara Kerja
+            </a>
+            <a href="#" className="block px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+              FAQ
+            </a>
+          </nav>
+        )}
+      </div>
+    </header>
+  );
+}

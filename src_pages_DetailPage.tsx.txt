@@ -1,0 +1,364 @@
+import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Clock, Shield, Heart, MessageSquare, Star, ChevronRight, ArrowLeft, ImageIcon } from 'lucide-react';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+import { useApp } from '../contexts/AppContext';
+import { useToast } from '../contexts/ToastContext';
+
+export default function DetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { emails, user, addToCart, addChat, isInWishlist, addToWishlist, removeFromWishlist } = useApp();
+  const { addToast } = useToast();
+
+  const [showBuyModal, setShowBuyModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('transfer');
+
+  const email = emails.find(e => e.id === id);
+
+  if (!email) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Email tidak ditemukan</h2>
+            <button
+              onClick={() => navigate('/search')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Kembali ke pencarian
+            </button>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  const handleBuy = () => {
+    if (!user) {
+      addToast('Anda harus login terlebih dahulu', 'error');
+      navigate('/login');
+      return;
+    }
+    addToCart(email.id);
+    setShowBuyModal(true);
+  };
+
+  const handleConfirmBuy = () => {
+    addToast(`Transaksi berhasil! ${email.address} ditambahkan ke akun Anda.`, 'success');
+    setShowBuyModal(false);
+    navigate('/dashboard/buyer');
+  };
+
+  const handleChat = () => {
+    if (!user) {
+      addToast('Anda harus login terlebih dahulu', 'error');
+      navigate('/login');
+      return;
+    }
+
+    const chat = {
+      id: `chat-${email.id}`,
+      participantId: email.sellerId,
+      participantName: email.sellerName,
+      unreadCount: 0,
+      messages: [],
+    };
+
+    addChat(chat);
+    addToast(`Chat dengan ${email.sellerName} dibuka`, 'info');
+    navigate('/inbox');
+  };
+
+  const toggleWishlist = () => {
+    if (isInWishlist(email.id)) {
+      removeFromWishlist(email.id);
+      addToast('Dihapus dari wishlist', 'info');
+    } else {
+      addToWishlist(email.id);
+      addToast('Ditambahkan ke wishlist', 'success');
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-slate-50">
+      <Header />
+
+      <div className="flex-1">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Back Button */}
+          <button
+            onClick={() => navigate('/search')}
+            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-medium mb-6 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Kembali
+          </button>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Main Content */}
+            <div className="md:col-span-2">
+              {/* Email Address */}
+              <div className="bg-white rounded-lg shadow border border-slate-200 p-6 mb-6">
+                <h1 className="text-3xl font-bold text-slate-900 mb-4">{email.address}</h1>
+
+                {/* Quick Info */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-slate-50 rounded-lg p-4">
+                    <p className="text-xs text-slate-600 mb-1">Provider</p>
+                    <p className="font-bold text-slate-900 uppercase">{email.provider}</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-4">
+                    <p className="text-xs text-slate-600 mb-1">Umur Akun</p>
+                    <p className="font-bold text-slate-900">{email.age}</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-4">
+                    <p className="text-xs text-slate-600 mb-1">Garansi</p>
+                    <p className="font-bold text-slate-900">{email.warranty}</p>
+                  </div>
+                  <div className="bg-green-50 rounded-lg p-4">
+                    <p className="text-xs text-slate-600 mb-1">Status</p>
+                    <p className="font-bold text-green-700">Tersedia</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Verifications */}
+              <div className="bg-white rounded-lg shadow border border-slate-200 p-6 mb-6">
+                <h3 className="font-bold text-slate-900 mb-4">✅ Status Verifikasi</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className={`flex items-center gap-3 p-4 rounded-lg ${email.verifications.phone ? 'bg-green-50' : 'bg-slate-50'}`}>
+                    <Shield className={`w-6 h-6 ${email.verifications.phone ? 'text-green-600' : 'text-slate-400'}`} />
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">HP Terverifikasi</p>
+                      <p className={`text-xs ${email.verifications.phone ? 'text-green-600' : 'text-slate-600'}`}>
+                        {email.verifications.phone ? '✓ Terverifikasi' : '✗ Belum'}</p>
+                    </div>
+                  </div>
+
+                  <div className={`flex items-center gap-3 p-4 rounded-lg ${email.verifications.recovery ? 'bg-green-50' : 'bg-slate-50'}`}>
+                    <Shield className={`w-6 h-6 ${email.verifications.recovery ? 'text-green-600' : 'text-slate-400'}`} />
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">Email Recovery</p>
+                      <p className={`text-xs ${email.verifications.recovery ? 'text-green-600' : 'text-slate-600'}`}>
+                        {email.verifications.recovery ? '✓ Aktif' : '✗ Tidak'}</p>
+                    </div>
+                  </div>
+
+                  <div className={`flex items-center gap-3 p-4 rounded-lg ${email.verifications.twoFa ? 'bg-green-50' : 'bg-slate-50'}`}>
+                    <Shield className={`w-6 h-6 ${email.verifications.twoFa ? 'text-green-600' : 'text-slate-400'}`} />
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">2FA</p>
+                      <p className={`text-xs ${email.verifications.twoFa ? 'text-green-600' : 'text-slate-600'}`}>
+                        {email.verifications.twoFa ? '✓ Aktif' : '✗ Tidak'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="bg-white rounded-lg shadow border border-slate-200 p-6 mb-6">
+                <h3 className="font-bold text-slate-900 mb-4">📝 Deskripsi</h3>
+                <p className="text-slate-700 leading-relaxed mb-4">{email.description}</p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-900">
+                    💡 <strong>Tip:</strong> Hubungi penjual untuk info lebih detail tentang akun ini
+                  </p>
+                </div>
+              </div>
+
+              {/* Screenshots */}
+              {email.imageCount > 0 && (
+                <div className="bg-white rounded-lg shadow border border-slate-200 p-6">
+                  <h3 className="font-bold text-slate-900 mb-4">📸 Tangkapan Layar</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {Array.from({ length: email.imageCount }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="bg-slate-100 rounded-lg h-32 flex items-center justify-center border-2 border-dashed border-slate-300 hover:bg-slate-200 transition-colors cursor-pointer"
+                      >
+                        <ImageIcon className="w-8 h-8 text-slate-400" />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-600 mt-3">
+                    🔒 Gambar-gambar sensitif di-blur untuk privasi
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Sidebar - Seller Info & Buy Button */}
+            <div className="md:col-span-1">
+              {/* Price Card */}
+              <div className="bg-white rounded-lg shadow border border-slate-200 p-6 mb-6 sticky top-24">
+                <div className="mb-6">
+                  <p className="text-xs text-slate-600 mb-2">Harga Total</p>
+                  <p className="text-4xl font-bold text-blue-600 mb-2">
+                    Rp {email.price.toLocaleString('id-ID')}
+                  </p>
+                  <p className="text-xs text-slate-600">Termasuk fee platform</p>
+                </div>
+
+                {/* Buy Button */}
+                <button
+                  onClick={handleBuy}
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors mb-3"
+                >
+                  🛒 Beli Sekarang
+                </button>
+
+                {/* Chat Button */}
+                <button
+                  onClick={handleChat}
+                  className="w-full flex items-center justify-center gap-2 border border-blue-600 text-blue-600 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors mb-3"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  Tanya Penjual
+                </button>
+
+                {/* Wishlist Button */}
+                <button
+                  onClick={toggleWishlist}
+                  className="w-full flex items-center justify-center gap-2 border border-slate-300 text-slate-700 py-3 rounded-lg font-semibold hover:bg-slate-50 transition-colors"
+                >
+                  <Heart
+                    className={`w-5 h-5 ${isInWishlist(email.id) ? 'fill-red-500 text-red-500' : ''}`}
+                  />
+                  {isInWishlist(email.id) ? 'Sudah di Wishlist' : 'Simpan ke Wishlist'}
+                </button>
+              </div>
+
+              {/* Seller Card */}
+              <div className="bg-white rounded-lg shadow border border-slate-200 p-6 mb-6">
+                <h3 className="font-bold text-slate-900 mb-4">👤 Penjual</h3>
+
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                    {email.sellerName.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-900">{email.sellerName}</p>
+                    <div className="flex items-center gap-1">
+                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                      <span className="text-sm font-medium text-slate-900">
+                        {email.sellerRating.toFixed(1)}
+                      </span>
+                      <span className="text-sm text-slate-600">
+                        ({email.sellerReviews} ulasan)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Seller Badges */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-green-600">✓</span>
+                    <span className="text-slate-700">Terverifikasi</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-green-600">✓</span>
+                    <span className="text-slate-700">Respon cepat</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-green-600">✓</span>
+                    <span className="text-slate-700">Transaksi aman</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleChat}
+                  className="w-full px-4 py-2 bg-slate-100 text-slate-900 rounded-lg font-medium hover:bg-slate-200 transition-colors"
+                >
+                  Chat dengan Penjual
+                </button>
+              </div>
+
+              {/* Info Card */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-900 mb-2">ℹ️ Informasi Penting</h4>
+                <ul className="space-y-2 text-sm text-blue-900">
+                  <li>✓ Akses instan setelah pembayaran</li>
+                  <li>✓ Garansi {email.warranty}</li>
+                  <li>✓ 100% uang kembali jika ada masalah</li>
+                  <li>✓ Support 24/7</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Buy Modal */}
+      {showBuyModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-8">
+            <h3 className="text-xl font-bold text-slate-900 mb-6">Konfirmasi Pembelian</h3>
+
+            {/* Order Summary */}
+            <div className="bg-slate-50 rounded-lg p-4 mb-6">
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-slate-700">Email</span>
+                  <span className="font-medium text-slate-900">{email.address}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-700">Harga</span>
+                  <span className="font-medium text-slate-900">Rp {email.price.toLocaleString('id-ID')}</span>
+                </div>
+                <div className="border-t border-slate-200 pt-3 flex justify-between">
+                  <span className="font-bold text-slate-900">Total</span>
+                  <span className="font-bold text-blue-600">Rp {email.price.toLocaleString('id-ID')}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Method */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-slate-900 mb-3">Metode Pembayaran</label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="transfer">Transfer Bank</option>
+                <option value="ewallet">E-Wallet (Dana/OVO/GCash)</option>
+                <option value="card">Kartu Kredit</option>
+              </select>
+            </div>
+
+            {/* Terms Checkbox */}
+            <label className="flex items-center gap-2 mb-6 cursor-pointer">
+              <input type="checkbox" className="w-4 h-4 border-slate-300 rounded cursor-pointer" defaultChecked />
+              <span className="text-sm text-slate-700">
+                Saya setuju dengan syarat & ketentuan
+              </span>
+            </label>
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowBuyModal(false)}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 font-medium rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleConfirmBuy}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Konfirmasi & Bayar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Footer />
+    </div>
+  );
+}
