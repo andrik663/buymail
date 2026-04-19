@@ -1,0 +1,362 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Mail, History, Heart, Wallet, Settings, Eye, Trash2, Download } from 'lucide-react';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+import { useApp } from '../contexts/AppContext';
+import { useToast } from '../contexts/ToastContext';
+
+type TabName = 'emails' | 'history' | 'wishlist' | 'balance' | 'settings';
+
+export default function BuyerDashboard() {
+  const navigate = useNavigate();
+  const { user, emails, cart, wishlist, removeFromWishlist, logout } = useApp();
+  const { addToast } = useToast();
+  const [activeTab, setActiveTab] = useState<TabName>('emails');
+  const [balance, setBalance] = useState(250000);
+  const [topupAmount, setTopupAmount] = useState(50000);
+
+  const menuItems: { id: TabName; label: string }[] = [
+    { id: 'emails', label: 'Email Saya' },
+    { id: 'history', label: 'Riwayat Transaksi' },
+    { id: 'wishlist', label: 'Wishlist' },
+    { id: 'balance', label: 'Saldo & Pembayaran' },
+    { id: 'settings', label: 'Pengaturan' },
+  ];
+
+  const myEmails = emails.filter(e => cart.includes(e.id)).slice(0, 3);
+  const transactions = [
+    { id: 1, email: 'premium.acc***@gmail.com', price: 150000, date: '10 Des 2024', status: 'Lunas' },
+    { id: 2, email: 'business.email***@outlook.com', price: 120000, date: '8 Des 2024', status: 'Lunas' },
+  ];
+  const wishlisted = emails.filter(e => wishlist.includes(e.id));
+
+  const handleTopup = () => {
+    setBalance(prev => prev + topupAmount);
+    addToast(`Top up Rp ${topupAmount.toLocaleString('id-ID')} berhasil!`, 'success');
+  };
+
+  const handleLogout = () => {
+    logout();
+    addToast('Anda telah logout', 'info');
+    navigate('/');
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Header />
+
+      <div className="flex-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-slate-900">Dashboard Pembeli</h1>
+            <p className="text-slate-600 mt-2">Kelola email, transaksi, dan akun Anda</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {/* Sidebar */}
+            <div className="md:col-span-1">
+              <div className="bg-white rounded-lg shadow border border-slate-200 p-6 sticky top-24">
+                <div className="flex items-center gap-3 mb-6 pb-6 border-b border-slate-200">
+                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                    {user?.name.charAt(0) || 'U'}
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900">{user?.name || 'User'}</p>
+                    <p className="text-xs text-slate-600 capitalize">{user?.role}</p>
+                  </div>
+                </div>
+
+                <nav className="space-y-2">
+                  {menuItems.map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${
+                        activeTab === item.id
+                          ? 'bg-blue-600 text-white'
+                          : 'text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </nav>
+
+                <button
+                  onClick={handleLogout}
+                  className="w-full mt-6 px-4 py-2 border border-red-300 text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="md:col-span-3">
+              {/* Email Saya Tab */}
+              {activeTab === 'emails' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-lg shadow border border-slate-200 p-6">
+                    <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                      <Mail className="w-5 h-5 text-blue-600" />
+                      Email Saya
+                    </h2>
+
+                    {myEmails.length > 0 ? (
+                      <div className="space-y-4">
+                        {myEmails.map(email => (
+                          <div key={email.id} className="flex items-start justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
+                            <div className="flex-1">
+                              <p className="font-bold text-slate-900 mb-2">{email.address}</p>
+                              <div className="grid grid-cols-2 gap-2 text-sm text-slate-600 mb-3">
+                                <p>Provider: <span className="font-medium">{email.provider.toUpperCase()}</span></p>
+                                <p>Umur: <span className="font-medium">{email.age}</span></p>
+                              </div>
+                              <p className="text-sm text-green-700">Aktif (Garansi: {email.warranty})</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button className="p-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors" title="Lihat akses">
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => addToast('Email dihapus', 'info')}
+                                className="p-2 bg-white border border-slate-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                                title="Hapus"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <Mail className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                        <p className="text-slate-600 mb-4">Anda belum membeli email</p>
+                        <button
+                          onClick={() => navigate('/search')}
+                          className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+                        >
+                          Cari Email Sekarang
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Riwayat Transaksi Tab */}
+              {activeTab === 'history' && (
+                <div className="bg-white rounded-lg shadow border border-slate-200 p-6">
+                  <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                    <History className="w-5 h-5 text-blue-600" />
+                    Riwayat Transaksi
+                  </h2>
+
+                  {transactions.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="border-b border-slate-200">
+                          <tr>
+                            <th className="text-left py-3 px-4 font-semibold text-slate-900">Email</th>
+                            <th className="text-left py-3 px-4 font-semibold text-slate-900">Harga</th>
+                            <th className="text-left py-3 px-4 font-semibold text-slate-900">Tanggal</th>
+                            <th className="text-left py-3 px-4 font-semibold text-slate-900">Status</th>
+                            <th className="text-left py-3 px-4 font-semibold text-slate-900">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {transactions.map(tx => (
+                            <tr key={tx.id} className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="py-3 px-4 text-slate-700">{tx.email}</td>
+                              <td className="py-3 px-4 font-bold text-slate-900">Rp {tx.price.toLocaleString('id-ID')}</td>
+                              <td className="py-3 px-4 text-slate-600">{tx.date}</td>
+                              <td className="py-3 px-4">
+                                <span className="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                                  {tx.status}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4">
+                                <button className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                                  <Download className="w-4 h-4" />
+                                  Invoice
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-center text-slate-600 py-12">Belum ada transaksi</p>
+                  )}
+                </div>
+              )}
+
+              {/* Wishlist Tab */}
+              {activeTab === 'wishlist' && (
+                <div className="bg-white rounded-lg shadow border border-slate-200 p-6">
+                  <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                    <Heart className="w-5 h-5 text-red-500" />
+                    Wishlist ({wishlisted.length})
+                  </h2>
+
+                  {wishlisted.length > 0 ? (
+                    <div className="space-y-4">
+                      {wishlisted.map(email => (
+                        <div key={email.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
+                          <div className="flex-1">
+                            <p className="font-bold text-slate-900 mb-1">{email.address}</p>
+                            <p className="text-sm text-slate-600">Rp {email.price.toLocaleString('id-ID')}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => removeFromWishlist(email.id)}
+                              className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors text-sm"
+                            >
+                              Hapus
+                            </button>
+                            <button
+                              onClick={() => navigate(`/email/${email.id}`)}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                            >
+                              Lihat
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-slate-600 py-12">Wishlist Anda kosong</p>
+                  )}
+                </div>
+              )}
+
+              {/* Saldo & Pembayaran Tab */}
+              {activeTab === 'balance' && (
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-lg shadow p-8">
+                    <p className="text-blue-100 mb-2">Saldo Anda</p>
+                    <h3 className="text-4xl font-bold mb-6">Rp {balance.toLocaleString('id-ID')}</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        onClick={handleTopup}
+                        className="px-6 py-2 bg-white text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
+                      >
+                        Top Up
+                      </button>
+                      <button className="px-6 py-2 border border-white text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors">
+                        Tarik Saldo
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow border border-slate-200 p-6">
+                    <h3 className="text-lg font-bold text-slate-900 mb-4">Tambah Saldo</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-900 mb-2">Nominal</label>
+                        <div className="grid grid-cols-3 gap-3 mb-4">
+                          {[50000, 100000, 250000].map(amount => (
+                            <button
+                              key={amount}
+                              onClick={() => setTopupAmount(amount)}
+                              className={`px-4 py-3 rounded-lg font-medium transition-colors ${
+                                topupAmount === amount
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                              }`}
+                            >
+                              Rp {(amount / 1000).toFixed(0)}K
+                            </button>
+                          ))}
+                        </div>
+                        <input
+                          type="number"
+                          value={topupAmount}
+                          onChange={(e) => setTopupAmount(parseInt(e.target.value) || 0)}
+                          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <button
+                        onClick={handleTopup}
+                        className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                      >
+                        Bayar Sekarang
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow border border-slate-200 p-6">
+                    <h3 className="text-lg font-bold text-slate-900 mb-4">Riwayat Top Up</h3>
+                    <p className="text-center text-slate-600 py-8">Belum ada history top up</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Pengaturan Tab */}
+              {activeTab === 'settings' && (
+                <div className="bg-white rounded-lg shadow border border-slate-200 p-6">
+                  <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                    <Settings className="w-5 h-5 text-slate-600" />
+                    Pengaturan Akun
+                  </h2>
+
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">Email</label>
+                      <input
+                        type="email"
+                        defaultValue={user?.email}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">Password Baru</label>
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="pt-6 border-t border-slate-200">
+                      <h3 className="font-semibold text-slate-900 mb-4">Notifikasi</h3>
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" defaultChecked className="w-4 h-4" />
+                        <span className="text-slate-700">Kirim notifikasi email untuk pesan chat baru</span>
+                      </label>
+                    </div>
+
+                    <div className="flex gap-3 pt-6 border-t border-slate-200">
+                      <button
+                        onClick={() => addToast('Pengaturan disimpan', 'success')}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                      >
+                        Simpan
+                      </button>
+                      <button className="px-6 py-2 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors">
+                        Batal
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-12 pt-12 border-t border-slate-200">
+                    <h3 className="font-bold text-red-600 mb-4">Zona Berbahaya</h3>
+                    <button className="px-6 py-2 border border-red-300 text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors">
+                      Hapus Akun
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Footer />
+    </div>
+  );
+}
