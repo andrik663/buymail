@@ -41,7 +41,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleSuccess = (credentialResponse: { credential?: string }) => {
+  const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
     try {
       setIsLoading(true);
 

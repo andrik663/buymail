@@ -33,7 +33,7 @@ export default function RegisterPage() {
     setFormData(prev => ({ ...prev, role: newRole }));
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
@@ -68,7 +68,7 @@ export default function RegisterPage() {
     }
   };
 
-  const handleGoogleSuccess = (credentialResponse: { credential?: string }) => {
+  const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
     try {
       setIsLoading(true);
 

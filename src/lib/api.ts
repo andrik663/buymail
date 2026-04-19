@@ -42,6 +42,7 @@ export interface EmailsQuery {
   sort?: 'price_asc' | 'price_desc' | 'newest' | 'rating';
   page?: number;
   limit?: number;
+  search?: string;
 }
 
 export const emailsApi = {
@@ -53,6 +54,7 @@ export const emailsApi = {
     if (query.sort) params.set('sort', query.sort);
     if (query.page) params.set('page', String(query.page));
     if (query.limit) params.set('limit', String(query.limit));
+    if (query.search) params.set('search', query.search);
     return request<{ emails: Email[]; total: number; page: number; limit: number }>(
       `/emails?${params.toString()}`
     );
