@@ -1,10 +1,13 @@
-import { Link, useNavigate } from 'react-router-dom';
+'use client';
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Menu, X, LogOut, User, Settings, Bell, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
-import { useApp } from '../contexts/AppContext';
+import { useApp } from '@/contexts/AppContext';
 
 export default function Header() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { user, logout, chats } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);

@@ -1,5 +1,7 @@
+'use client';
+
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { authApi, cartApi, wishlistApi, emailsApi } from '../lib/api';
+import { authApi, cartApi, wishlistApi, emailsApi } from '@/lib/api';
 
 export interface User {
   id: string;
