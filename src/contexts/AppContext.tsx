@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { authApi, cartApi, wishlistApi, emailsApi } from '../lib/api';
 
 export interface User {
   id: string;
@@ -53,6 +54,8 @@ export interface Chat {
 interface AppContextType {
   user: User | null;
   emails: Email[];
+  emailsTotal: number;
+  emailsLoading: boolean;
   chats: Chat[];
   cart: string[];
   wishlist: string[];
@@ -60,23 +63,24 @@ interface AppContextType {
 
   // User actions
   setUser: (user: User | null) => void;
-  login: (email: string, password: string) => void;
-  logout: () => void;
-  register: (name: string, email: string, password: string, role: 'buyer' | 'seller' | 'both') => void;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  register: (name: string, email: string, password: string, role: 'buyer' | 'seller' | 'both') => Promise<void>;
 
   // Email actions
+  loadEmails: (query?: Parameters<typeof emailsApi.list>[0]) => Promise<void>;
   addEmail: (email: Email) => void;
   removeEmail: (id: string) => void;
   updateEmail: (id: string, updates: Partial<Email>) => void;
 
   // Cart actions
-  addToCart: (emailId: string) => void;
-  removeFromCart: (emailId: string) => void;
-  clearCart: () => void;
+  addToCart: (emailId: string) => Promise<void>;
+  removeFromCart: (emailId: string) => Promise<void>;
+  clearCart: () => Promise<void>;
 
   // Wishlist actions
-  addToWishlist: (emailId: string) => void;
-  removeFromWishlist: (emailId: string) => void;
+  addToWishlist: (emailId: string) => Promise<void>;
+  removeFromWishlist: (emailId: string) => Promise<void>;
   isInWishlist: (emailId: string) => boolean;
 
   // Chat actions
@@ -93,36 +97,85 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [emails, setEmails] = useState<Email[]>(getSampleEmails());
+  const [user, setUserState] = useState<User | null>(null);
+  const [emails, setEmails] = useState<Email[]>([]);
+  const [emailsTotal, setEmailsTotal] = useState(0);
+  const [emailsLoading, setEmailsLoading] = useState(false);
   const [chats, setChats] = useState<Chat[]>([]);
   const [cart, setCart] = useState<string[]>([]);
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<string[]>([]);
 
-  const login = useCallback((email: string, _password: string) => {
-    setUser({
-      id: '1',
-      name: 'John Doe',
-      email,
-      role: 'both',
-      isLoggedIn: true,
-    });
+  // Restore session on mount
+  useEffect(() => {
+    authApi.me()
+      .then(({ user }) => {
+        if (user) {
+          setUserState(user);
+          // Load cart and wishlist
+          cartApi.get().then(({ items }) => setCart(items.map(i => String(i.listing_id)))).catch(() => {});
+          wishlistApi.get().then(({ items }) => setWishlist(items)).catch(() => {});
+        }
+      })
+      .catch(() => {});
   }, []);
 
-  const logout = useCallback(() => {
-    setUser(null);
+  // Load emails (from DB if available, fallback to sample)
+  const loadEmails = useCallback(async (query: Parameters<typeof emailsApi.list>[0] = {}) => {
+    setEmailsLoading(true);
+    try {
+      const result = await emailsApi.list({ limit: 50, ...query });
+      if (result.emails.length > 0) {
+        setEmails(result.emails);
+        setEmailsTotal(result.total);
+      } else {
+        // Fallback to sample data when DB is empty
+        const sample = getSampleEmails();
+        setEmails(sample);
+        setEmailsTotal(sample.length);
+      }
+    } catch {
+      // API not available (dev without Vercel Functions) — use sample data
+      const sample = getSampleEmails();
+      setEmails(sample);
+      setEmailsTotal(sample.length);
+    } finally {
+      setEmailsLoading(false);
+    }
+  }, []);
+
+  // Load emails on mount
+  useEffect(() => {
+    loadEmails();
+  }, [loadEmails]);
+
+  const setUser = useCallback((u: User | null) => {
+    setUserState(u);
+  }, []);
+
+  const login = useCallback(async (email: string, password: string) => {
+    const { user } = await authApi.login(email, password);
+    setUserState(user);
+    // Load user-specific data
+    cartApi.get().then(({ items }) => setCart(items.map(i => String(i.listing_id)))).catch(() => {});
+    wishlistApi.get().then(({ items }) => setWishlist(items)).catch(() => {});
+  }, []);
+
+  const logout = useCallback(async () => {
+    await authApi.logout();
+    setUserState(null);
     setCart([]);
+    setWishlist([]);
   }, []);
 
-  const register = useCallback((name: string, email: string, _password: string, role: 'buyer' | 'seller' | 'both') => {
-    setUser({
-      id: Date.now().toString(),
-      name,
-      email,
-      role,
-      isLoggedIn: true,
-    });
+  const register = useCallback(async (
+    name: string,
+    email: string,
+    password: string,
+    role: 'buyer' | 'seller' | 'both'
+  ) => {
+    const { user } = await authApi.register(name, email, password, role);
+    setUserState(user);
   }, []);
 
   const addEmail = useCallback((email: Email) => {
@@ -137,46 +190,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setEmails(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
   }, []);
 
-  const addToCart = useCallback((emailId: string) => {
+  const addToCart = useCallback(async (emailId: string) => {
     setCart(prev => prev.includes(emailId) ? prev : [...prev, emailId]);
-  }, []);
+    if (user) {
+      cartApi.add(emailId).catch(() => {});
+    }
+  }, [user]);
 
-  const removeFromCart = useCallback((emailId: string) => {
+  const removeFromCart = useCallback(async (emailId: string) => {
     setCart(prev => prev.filter(id => id !== emailId));
-  }, []);
+    if (user) {
+      cartApi.remove(emailId).catch(() => {});
+    }
+  }, [user]);
 
-  const clearCart = useCallback(() => {
+  const clearCart = useCallback(async () => {
     setCart([]);
-  }, []);
+    if (user) {
+      cartApi.clear().catch(() => {});
+    }
+  }, [user]);
 
-  const addToWishlist = useCallback((emailId: string) => {
+  const addToWishlist = useCallback(async (emailId: string) => {
     setWishlist(prev => prev.includes(emailId) ? prev : [...prev, emailId]);
-  }, []);
+    if (user) {
+      wishlistApi.add(emailId).catch(() => {});
+    }
+  }, [user]);
 
-  const removeFromWishlist = useCallback((emailId: string) => {
+  const removeFromWishlist = useCallback(async (emailId: string) => {
     setWishlist(prev => prev.filter(id => id !== emailId));
-  }, []);
+    if (user) {
+      wishlistApi.remove(emailId).catch(() => {});
+    }
+  }, [user]);
 
   const isInWishlist = useCallback((emailId: string) => {
     return wishlist.includes(emailId);
   }, [wishlist]);
 
   const addChat = useCallback((chat: Chat) => {
-    setChats(prev => {
-      const exists = prev.find(c => c.id === chat.id);
-      return exists ? prev : [...prev, chat];
-    });
+    setChats(prev => prev.find(c => c.id === chat.id) ? prev : [...prev, chat]);
   }, []);
 
   const addMessage = useCallback((chatId: string, message: ChatMessage) => {
     setChats(prev => prev.map(c =>
       c.id === chatId
-        ? {
-            ...c,
-            messages: [...c.messages, message],
-            lastMessage: message.content,
-            lastMessageTime: message.timestamp,
-          }
+        ? { ...c, messages: [...c.messages, message], lastMessage: message.content, lastMessageTime: message.timestamp }
         : c
     ));
   }, []);
@@ -194,24 +254,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const addNotification = useCallback((message: string) => {
-    const id = Date.now().toString();
+    const id = `${Date.now()}-${message.slice(0, 8)}`;
     setNotifications(prev => [...prev, id]);
-    // Suppress unused warning for message param in demo
-    void message;
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n !== id));
-    }, 5000);
+    setTimeout(() => setNotifications(prev => prev.filter(n => n !== id)), 5000);
   }, []);
 
-  const clearNotifications = useCallback(() => {
-    setNotifications([]);
-  }, []);
+  const clearNotifications = useCallback(() => setNotifications([]), []);
 
   return (
     <AppContext.Provider
       value={{
         user,
         emails,
+        emailsTotal,
+        emailsLoading,
         chats,
         cart,
         wishlist,
@@ -220,6 +276,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         login,
         logout,
         register,
+        loadEmails,
         addEmail,
         removeEmail,
         updateEmail,
@@ -244,11 +301,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 export const useApp = () => {
   const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp must be used within AppProvider');
-  }
+  if (!context) throw new Error('useApp must be used within AppProvider');
   return context;
 };
+
+// ─── Sample data fallback (used when DB has no listings yet) ─────────────────
 
 function getSampleEmails(): Email[] {
   const sellers = [
@@ -259,21 +316,18 @@ function getSampleEmails(): Email[] {
     { id: 'seller5', name: 'DigitalAcc', rating: 4.3, reviews: 74 },
     { id: 'seller6', name: 'TopSeller ID', rating: 4.7, reviews: 201 },
   ];
-
   const prefixes = [
-    'premium', 'business', 'marketing', 'starter', 'growth', 'agency',
-    'outreach', 'bulk', 'promo', 'sales', 'digital', 'brand', 'corp',
-    'lead', 'campaign', 'info', 'support', 'admin', 'contact', 'hello',
-    'team', 'media', 'social', 'news', 'store', 'shop', 'service', 'pro',
-    'mega', 'ultra', 'smart', 'fast', 'safe', 'secure', 'direct', 'prime',
-    'first', 'best', 'top', 'max', 'power', 'super', 'alpha', 'beta',
-    'delta', 'sigma', 'nova', 'apex', 'elite', 'vip', 'gold', 'silver',
+    'premium','business','marketing','starter','growth','agency','outreach','bulk',
+    'promo','sales','digital','brand','corp','lead','campaign','info','support',
+    'admin','contact','hello','team','media','social','news','store','shop',
+    'service','pro','mega','ultra','smart','fast','safe','secure','direct',
+    'prime','first','best','top','max','power','super','alpha','beta','delta',
+    'sigma','nova','apex','elite','vip','gold','silver',
   ];
-
   const providers: Array<Email['provider']> = ['gmail', 'outlook', 'yahoo', 'custom'];
   const domains = ['gmail.com', 'outlook.com', 'yahoo.com', 'mycompany.id'];
-  const ages = ['1 tahun', '2 tahun', '3 tahun', '4 tahun', '5 tahun', '6 tahun', '1 tahun 6 bulan', '2 tahun 8 bulan', '3 tahun 4 bulan'];
-  const warranties = ['3 hari', '7 hari', '14 hari', '30 hari'];
+  const ages = ['1 tahun','2 tahun','3 tahun','4 tahun','5 tahun','6 tahun','1 tahun 6 bulan','2 tahun 8 bulan','3 tahun 4 bulan'];
+  const warranties = ['3 hari','7 hari','14 hari','30 hari'];
   const descriptions = [
     'Akun bersih tanpa riwayat spam, siap pakai untuk bisnis.',
     'Verified lengkap, cocok untuk marketing campaign profesional.',
@@ -285,68 +339,22 @@ function getSampleEmails(): Email[] {
     'Outlook business class, full security features enabled.',
   ];
 
-  const baseEmails: Email[] = [
-    {
-      id: '1', address: 'premium.acc***@gmail.com', provider: 'gmail', age: '5 tahun 3 bulan',
-      price: 150000, description: descriptions[0], verifications: { phone: true, recovery: true, twoFa: false },
-      sellerId: 'seller1', sellerName: 'Akun Resmi', sellerRating: 4.8, sellerReviews: 127,
-      status: 'active', warranty: '7 hari', imageCount: 3,
-    },
-    {
-      id: '2', address: 'business.email***@outlook.com', provider: 'outlook', age: '3 tahun 6 bulan',
-      price: 120000, description: descriptions[1], verifications: { phone: true, recovery: true, twoFa: true },
-      sellerId: 'seller2', sellerName: 'Email Terpercaya', sellerRating: 4.6, sellerReviews: 89,
-      status: 'active', warranty: '14 hari', imageCount: 2,
-    },
-    {
-      id: '3', address: 'starter.mail***@yahoo.com', provider: 'yahoo', age: '2 tahun',
-      price: 85000, description: descriptions[2], verifications: { phone: true, recovery: false, twoFa: false },
-      sellerId: 'seller3', sellerName: 'Starter Pack', sellerRating: 4.4, sellerReviews: 56,
-      status: 'active', warranty: '3 hari', imageCount: 1,
-    },
-    {
-      id: '4', address: 'custom.domain***@company.com', provider: 'custom', age: '4 tahun 1 bulan',
-      price: 250000, description: descriptions[3], verifications: { phone: true, recovery: true, twoFa: true },
-      sellerId: 'seller1', sellerName: 'Akun Resmi', sellerRating: 4.8, sellerReviews: 127,
-      status: 'active', warranty: '30 hari', imageCount: 4,
-    },
-    {
-      id: '5', address: 'marketing.lead***@gmail.com', provider: 'gmail', age: '1 tahun 8 bulan',
-      price: 95000, description: descriptions[4], verifications: { phone: true, recovery: true, twoFa: false },
-      sellerId: 'seller2', sellerName: 'Email Terpercaya', sellerRating: 4.6, sellerReviews: 89,
-      status: 'active', warranty: '7 hari', imageCount: 2,
-    },
-    {
-      id: '6', address: 'growth.hack***@outlook.com', provider: 'outlook', age: '6 tahun',
-      price: 175000, description: descriptions[5], verifications: { phone: true, recovery: true, twoFa: true },
-      sellerId: 'seller3', sellerName: 'Starter Pack', sellerRating: 4.4, sellerReviews: 56,
-      status: 'active', warranty: '14 hari', imageCount: 3,
-    },
-  ];
-
-  // Generate ~200 additional entries to simulate a real marketplace
-  const generated: Email[] = [];
-  for (let i = 7; i <= 220; i++) {
-    const providerIdx = (i + Math.floor(i / 3)) % 4;
-    const provider = providers[providerIdx];
+  const emails: Email[] = [];
+  for (let i = 1; i <= 220; i++) {
+    const pi = (i + Math.floor(i / 3)) % 4;
+    const provider = providers[pi];
     const prefix = prefixes[(i * 3 + 7) % prefixes.length];
-    const suffix = `${(i * 17 + 3) % 999}`;
-    const address = `${prefix}.${suffix}***@${domains[providerIdx]}`;
+    const suffix = String((i * 17 + 3) % 999);
     const seller = sellers[i % sellers.length];
-    const priceBase = [45000, 80000, 120000, 200000][providerIdx];
-    const price = priceBase + ((i * 7919) % 80000);
-    const phone = i % 3 !== 0;
-    const recovery = i % 4 !== 1;
-    const twoFa = i % 5 === 0;
-
-    generated.push({
+    const priceBase = [45000, 80000, 120000, 200000][pi];
+    emails.push({
       id: String(i),
-      address,
+      address: `${prefix}.${suffix}***@${domains[pi]}`,
       provider,
       age: ages[i % ages.length],
-      price,
+      price: priceBase + ((i * 7919) % 80000),
       description: descriptions[i % descriptions.length],
-      verifications: { phone, recovery, twoFa },
+      verifications: { phone: i % 3 !== 0, recovery: i % 4 !== 1, twoFa: i % 5 === 0 },
       sellerId: seller.id,
       sellerName: seller.name,
       sellerRating: seller.rating,
@@ -356,6 +364,5 @@ function getSampleEmails(): Email[] {
       imageCount: (i % 4) + 1,
     });
   }
-
-  return [...baseEmails, ...generated];
+  return emails;
 }

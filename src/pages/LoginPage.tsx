@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email || !password) {
@@ -30,12 +30,15 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      login(email, password);
+    try {
+      await login(email, password);
       addToast('Selamat datang!', 'success');
-      setIsLoading(false);
       navigate('/');
-    }, 1000);
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Login gagal', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleSuccess = (credentialResponse: { credential?: string }) => {
@@ -58,12 +61,10 @@ export default function LoginPage() {
       const googleEmail = decodedToken.email as string;
       const googleName = decodedToken.name as string;
 
-      setTimeout(() => {
-        login(googleEmail, 'google_oauth');
-        addToast(`Selamat datang ${googleName}!`, 'success');
-        setIsLoading(false);
-        navigate('/');
-      }, 1000);
+      await login(googleEmail, 'google_oauth');
+      addToast(`Selamat datang ${googleName}!`, 'success');
+      setIsLoading(false);
+      navigate('/');
     } catch {
       addToast('Gagal login dengan Google', 'error');
       setIsLoading(false);
@@ -175,14 +176,7 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* Demo Credentials */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mt-6 mb-6">
-              <p className="text-xs font-semibold text-slate-700 mb-3">Demo Credentials:</p>
-              <div className="space-y-2 text-xs text-slate-600">
-                <p>Email: <code className="bg-white px-2 py-1 rounded text-slate-900 font-mono">demo@email.com</code></p>
-                <p>Password: <code className="bg-white px-2 py-1 rounded text-slate-900 font-mono">123456</code></p>
-              </div>
-            </div>
+
 
             {/* Sign Up Link */}
             <p className="text-center text-slate-600">
@@ -193,12 +187,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Info Box */}
-          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-            <p className="text-sm text-blue-900">
-              Demo mode aktif - Semua transaksi adalah simulasi
-            </p>
-          </div>
+
         </div>
       </div>
 

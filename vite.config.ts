@@ -16,7 +16,13 @@ export default defineConfig({
     },
   },
   server: {
-    // Enable SPA fallback for client-side routing
     historyApiFallback: true,
+    proxy: {
+      // Proxy /api/* to the Vercel dev server (vercel dev runs on 3000)
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
   },
 });

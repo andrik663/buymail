@@ -57,12 +57,15 @@ export default function RegisterPage() {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      register(formData.name, formData.email, formData.password, formData.role);
+    try {
+      await register(formData.name, formData.email, formData.password, formData.role);
       addToast(`Selamat datang ${formData.name}!`, 'success');
-      setIsLoading(false);
       navigate('/');
-    }, 1000);
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Pendaftaran gagal', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleSuccess = (credentialResponse: { credential?: string }) => {
@@ -85,12 +88,10 @@ export default function RegisterPage() {
       const googleEmail = decodedToken.email as string;
       const googleName = decodedToken.name as string;
 
-      setTimeout(() => {
-        register(googleName, googleEmail, 'google_oauth', 'buyer');
-        addToast(`Selamat datang ${googleName}!`, 'success');
-        setIsLoading(false);
-        navigate('/');
-      }, 1000);
+      await register(googleName, googleEmail, 'google_oauth', 'buyer');
+      addToast(`Selamat datang ${googleName}!`, 'success');
+      setIsLoading(false);
+      navigate('/');
     } catch {
       addToast('Gagal daftar dengan Google', 'error');
       setIsLoading(false);
@@ -262,12 +263,7 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          {/* Info Box */}
-          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-            <p className="text-sm text-blue-900">
-              Demo mode aktif - Semua transaksi adalah simulasi
-            </p>
-          </div>
+
         </div>
       </div>
 
