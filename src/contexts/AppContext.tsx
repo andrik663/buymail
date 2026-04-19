@@ -251,102 +251,111 @@ export const useApp = () => {
 };
 
 function getSampleEmails(): Email[] {
-  return [
+  const sellers = [
+    { id: 'seller1', name: 'Akun Resmi', rating: 4.8, reviews: 127 },
+    { id: 'seller2', name: 'Email Terpercaya', rating: 4.6, reviews: 89 },
+    { id: 'seller3', name: 'Starter Pack', rating: 4.4, reviews: 56 },
+    { id: 'seller4', name: 'BulkMail Pro', rating: 4.9, reviews: 312 },
+    { id: 'seller5', name: 'DigitalAcc', rating: 4.3, reviews: 74 },
+    { id: 'seller6', name: 'TopSeller ID', rating: 4.7, reviews: 201 },
+  ];
+
+  const prefixes = [
+    'premium', 'business', 'marketing', 'starter', 'growth', 'agency',
+    'outreach', 'bulk', 'promo', 'sales', 'digital', 'brand', 'corp',
+    'lead', 'campaign', 'info', 'support', 'admin', 'contact', 'hello',
+    'team', 'media', 'social', 'news', 'store', 'shop', 'service', 'pro',
+    'mega', 'ultra', 'smart', 'fast', 'safe', 'secure', 'direct', 'prime',
+    'first', 'best', 'top', 'max', 'power', 'super', 'alpha', 'beta',
+    'delta', 'sigma', 'nova', 'apex', 'elite', 'vip', 'gold', 'silver',
+  ];
+
+  const providers: Array<Email['provider']> = ['gmail', 'outlook', 'yahoo', 'custom'];
+  const domains = ['gmail.com', 'outlook.com', 'yahoo.com', 'mycompany.id'];
+  const ages = ['1 tahun', '2 tahun', '3 tahun', '4 tahun', '5 tahun', '6 tahun', '1 tahun 6 bulan', '2 tahun 8 bulan', '3 tahun 4 bulan'];
+  const warranties = ['3 hari', '7 hari', '14 hari', '30 hari'];
+  const descriptions = [
+    'Akun bersih tanpa riwayat spam, siap pakai untuk bisnis.',
+    'Verified lengkap, cocok untuk marketing campaign profesional.',
+    'Aged account dengan deliverability tinggi, clean history.',
+    'Full verifikasi, recovery aktif, perfect untuk B2B outreach.',
+    'Akun premium dengan history bersih, siap digunakan.',
+    'Terverifikasi phone & 2FA, cocok untuk operasional bisnis.',
+    'Gmail lama dengan reputasi baik, clean dari spam filter.',
+    'Outlook business class, full security features enabled.',
+  ];
+
+  const baseEmails: Email[] = [
     {
-      id: '1',
-      address: 'premium.acc***@gmail.com',
-      provider: 'gmail',
-      age: '5 tahun 3 bulan',
-      price: 150000,
-      description: 'Gmail premium dengan recovery email aktif, verified, siap pakai untuk bisnis. Akun bersih tanpa riwayat spam.',
-      verifications: { phone: true, recovery: true, twoFa: false },
-      sellerId: 'seller1',
-      sellerName: 'Akun Resmi',
-      sellerRating: 4.8,
-      sellerReviews: 127,
-      status: 'active',
-      warranty: '7 hari',
-      imageCount: 3,
+      id: '1', address: 'premium.acc***@gmail.com', provider: 'gmail', age: '5 tahun 3 bulan',
+      price: 150000, description: descriptions[0], verifications: { phone: true, recovery: true, twoFa: false },
+      sellerId: 'seller1', sellerName: 'Akun Resmi', sellerRating: 4.8, sellerReviews: 127,
+      status: 'active', warranty: '7 hari', imageCount: 3,
     },
     {
-      id: '2',
-      address: 'business.email***@outlook.com',
-      provider: 'outlook',
-      age: '3 tahun 6 bulan',
-      price: 120000,
-      description: 'Outlook business dengan 2FA aktif, recovery lengkap. Cocok untuk marketing campaign.',
-      verifications: { phone: true, recovery: true, twoFa: true },
-      sellerId: 'seller2',
-      sellerName: 'Email Terpercaya',
-      sellerRating: 4.6,
-      sellerReviews: 89,
-      status: 'active',
-      warranty: '14 hari',
-      imageCount: 2,
+      id: '2', address: 'business.email***@outlook.com', provider: 'outlook', age: '3 tahun 6 bulan',
+      price: 120000, description: descriptions[1], verifications: { phone: true, recovery: true, twoFa: true },
+      sellerId: 'seller2', sellerName: 'Email Terpercaya', sellerRating: 4.6, sellerReviews: 89,
+      status: 'active', warranty: '14 hari', imageCount: 2,
     },
     {
-      id: '3',
-      address: 'starter.mail***@yahoo.com',
-      provider: 'yahoo',
-      age: '2 tahun',
-      price: 85000,
-      description: 'Yahoo mail starter untuk pemula, sudah terverifikasi semua sistem keamanan.',
-      verifications: { phone: true, recovery: false, twoFa: false },
-      sellerId: 'seller3',
-      sellerName: 'Starter Pack',
-      sellerRating: 4.4,
-      sellerReviews: 56,
-      status: 'active',
-      warranty: '3 hari',
-      imageCount: 1,
+      id: '3', address: 'starter.mail***@yahoo.com', provider: 'yahoo', age: '2 tahun',
+      price: 85000, description: descriptions[2], verifications: { phone: true, recovery: false, twoFa: false },
+      sellerId: 'seller3', sellerName: 'Starter Pack', sellerRating: 4.4, sellerReviews: 56,
+      status: 'active', warranty: '3 hari', imageCount: 1,
     },
     {
-      id: '4',
-      address: 'custom.domain***@company.com',
-      provider: 'custom',
-      age: '4 tahun 1 bulan',
-      price: 250000,
-      description: 'Custom domain email dengan full control, akses admin panel tersedia. Untuk startup & SME.',
-      verifications: { phone: true, recovery: true, twoFa: true },
-      sellerId: 'seller1',
-      sellerName: 'Akun Resmi',
-      sellerRating: 4.8,
-      sellerReviews: 127,
-      status: 'active',
-      warranty: '30 hari',
-      imageCount: 4,
+      id: '4', address: 'custom.domain***@company.com', provider: 'custom', age: '4 tahun 1 bulan',
+      price: 250000, description: descriptions[3], verifications: { phone: true, recovery: true, twoFa: true },
+      sellerId: 'seller1', sellerName: 'Akun Resmi', sellerRating: 4.8, sellerReviews: 127,
+      status: 'active', warranty: '30 hari', imageCount: 4,
     },
     {
-      id: '5',
-      address: 'marketing.lead***@gmail.com',
-      provider: 'gmail',
-      age: '1 tahun 8 bulan',
-      price: 95000,
-      description: 'Gmail untuk lead generation, sudah ditest dengan campaign. Deliverability tinggi.',
-      verifications: { phone: true, recovery: true, twoFa: false },
-      sellerId: 'seller2',
-      sellerName: 'Email Terpercaya',
-      sellerRating: 4.6,
-      sellerReviews: 89,
-      status: 'active',
-      warranty: '7 hari',
-      imageCount: 2,
+      id: '5', address: 'marketing.lead***@gmail.com', provider: 'gmail', age: '1 tahun 8 bulan',
+      price: 95000, description: descriptions[4], verifications: { phone: true, recovery: true, twoFa: false },
+      sellerId: 'seller2', sellerName: 'Email Terpercaya', sellerRating: 4.6, sellerReviews: 89,
+      status: 'active', warranty: '7 hari', imageCount: 2,
     },
     {
-      id: '6',
-      address: 'growth.hack***@outlook.com',
-      provider: 'outlook',
-      age: '6 tahun',
-      price: 175000,
-      description: 'Outlook aged account dengan history clean, perfect untuk B2B outreach. Verified semua.',
-      verifications: { phone: true, recovery: true, twoFa: true },
-      sellerId: 'seller3',
-      sellerName: 'Starter Pack',
-      sellerRating: 4.4,
-      sellerReviews: 56,
-      status: 'active',
-      warranty: '14 hari',
-      imageCount: 3,
+      id: '6', address: 'growth.hack***@outlook.com', provider: 'outlook', age: '6 tahun',
+      price: 175000, description: descriptions[5], verifications: { phone: true, recovery: true, twoFa: true },
+      sellerId: 'seller3', sellerName: 'Starter Pack', sellerRating: 4.4, sellerReviews: 56,
+      status: 'active', warranty: '14 hari', imageCount: 3,
     },
   ];
+
+  // Generate ~200 additional entries to simulate a real marketplace
+  const generated: Email[] = [];
+  for (let i = 7; i <= 220; i++) {
+    const providerIdx = (i + Math.floor(i / 3)) % 4;
+    const provider = providers[providerIdx];
+    const prefix = prefixes[(i * 3 + 7) % prefixes.length];
+    const suffix = `${(i * 17 + 3) % 999}`;
+    const address = `${prefix}.${suffix}***@${domains[providerIdx]}`;
+    const seller = sellers[i % sellers.length];
+    const priceBase = [45000, 80000, 120000, 200000][providerIdx];
+    const price = priceBase + ((i * 7919) % 80000);
+    const phone = i % 3 !== 0;
+    const recovery = i % 4 !== 1;
+    const twoFa = i % 5 === 0;
+
+    generated.push({
+      id: String(i),
+      address,
+      provider,
+      age: ages[i % ages.length],
+      price,
+      description: descriptions[i % descriptions.length],
+      verifications: { phone, recovery, twoFa },
+      sellerId: seller.id,
+      sellerName: seller.name,
+      sellerRating: seller.rating,
+      sellerReviews: seller.reviews,
+      status: 'active',
+      warranty: warranties[i % warranties.length],
+      imageCount: (i % 4) + 1,
+    });
+  }
+
+  return [...baseEmails, ...generated];
 }
