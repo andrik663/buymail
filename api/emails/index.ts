@@ -102,7 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         sellerRating: parseFloat(String(row.seller_rating ?? 0)),
         sellerReviews: parseInt(String(row.seller_reviews ?? 0)),
         status: row.status as string,
-        warranty: row.warranty as string ?? '7 hari',
+        warranty: (row.warranty as string) ?? '7 hari',
         imageCount: 1,
       }));
 
