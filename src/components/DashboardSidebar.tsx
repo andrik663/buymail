@@ -1,0 +1,91 @@
+import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Menu, X, LogOut } from 'lucide-react';
+import { useApp } from '../contexts/AppContext';
+
+interface SidebarItem {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+}
+
+interface Props {
+  items: SidebarItem[];
+  userRole: 'buyer' | 'seller';
+}
+
+export default function DashboardSidebar({ items, userRole }: Props) {
+  const location = useLocation();
+  const { logout } = useApp();
+  const [open, setOpen] = useState(false);
+
+  const isActive = (href: string) => location.pathname === href;
+
+  return (
+    <>
+      {/* Mobile Toggle */}
+      <button
+        onClick={() => setOpen(!open)}
+        className="md:hidden fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-lg z-40"
+        aria-label="Toggle sidebar"
+      >
+        {open ? <X size={24} /> : <Menu size={24} />}
+      </button>
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed md:sticky top-0 left-0 h-screen bg-gray-900 text-white w-72 flex flex-col transition-transform z-30 ${
+          open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+      >
+        <div className="p-6 border-b border-gray-800">
+          <Link to="/" className="flex items-center gap-2 font-bold text-lg">
+            <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-sm font-bold">
+              E
+            </div>
+            EmailMarket
+          </Link>
+          <p className="text-xs text-gray-400 mt-2 capitalize">
+            {userRole === 'buyer' ? 'Mode Pembeli' : 'Mode Penjual'}
+          </p>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-2">
+          {items.map((item) => (
+            <Link
+              key={item.href}
+              to={item.href}
+              onClick={() => setOpen(false)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                isActive(item.href)
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800'
+              }`}
+            >
+              {item.icon}
+              <span className="font-medium">{item.label}</span>
+            </Link>
+          ))}
+        </nav>
+
+        <div className="p-4 border-t border-gray-800">
+          <button
+            onClick={logout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors"
+          >
+            <LogOut size={20} />
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile Overlay */}
+      {open && (
+        <div
+          className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
+          onClick={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+}
