@@ -19,7 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const [row] = await sql`
-      SELECT u.id, u.name, u.email, u.role, u.avatar_url
+      SELECT u.id, u.name, u.email, u.role, u.avatar
       FROM sessions s
       JOIN users u ON u.id = s.user_id
       WHERE s.token = ${sessionToken}
@@ -37,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         name: row.name,
         email: row.email,
         role: row.role,
-        avatar: row.avatar_url,
+        avatar: row.avatar,
         isLoggedIn: true,
       },
     });

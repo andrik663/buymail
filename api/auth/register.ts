@@ -37,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const [user] = await sql`
       INSERT INTO users (name, email, password_hash, role)
       VALUES (${name}, ${email}, ${passwordHash}, ${role})
-      RETURNING id, name, email, role, avatar_url, created_at
+      RETURNING id, name, email, role, avatar, created_at
     `;
 
     // Create a session token
@@ -60,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         name: user.name,
         email: user.email,
         role: user.role,
-        avatar: user.avatar_url,
+        avatar: user.avatar,
         isLoggedIn: true,
       },
     });

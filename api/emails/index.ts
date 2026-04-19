@@ -1,84 +1,105 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql } from '../_db';
+import { neon } from '@neondatabase/serverless';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const db = neon(process.env.DATABASE_URL!);
+
   if (req.method === 'GET') {
     try {
-      const { provider, min_price, max_price, sort = 'price_asc', page = '1', limit = '50' } = req.query as Record<string, string>;
+      const {
+        provider,
+        min_price,
+        max_price,
+        sort = 'price_asc',
+        page = '1',
+        limit = '50',
+        search = '',
+      } = req.query as Record<string, string>;
 
-      const offset = (parseInt(page) - 1) * parseInt(limit);
+      const pageNum = Math.max(1, parseInt(page));
+      const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+      const offset = (pageNum - 1) * limitNum;
 
-      let rows;
+      const orderBy =
+        sort === 'price_desc' ? 'el.price DESC' :
+        sort === 'newest'     ? 'el.created_at DESC' :
+        sort === 'rating'     ? 'seller_rating DESC' :
+        'el.price ASC';
+
+      // Build WHERE clauses
+      const params: (string | number)[] = ['active'];
+      let paramIdx = 2;
+      const whereClauses: string[] = ['el.status = $1'];
+
       if (provider && provider !== 'all') {
-        rows = await sql`
-          SELECT
-            el.*,
-            u.name AS seller_name,
-            COALESCE(AVG(r.rating), 0) AS seller_rating,
-            COUNT(DISTINCT r.id) AS seller_reviews
-          FROM email_listings el
-          JOIN users u ON u.id = el.seller_id
-          LEFT JOIN reviews r ON r.seller_id = el.seller_id
-          WHERE el.status = 'active'
-            AND el.provider = ${provider}
-            ${min_price ? sql`AND el.price >= ${parseInt(min_price)}` : sql``}
-            ${max_price ? sql`AND el.price <= ${parseInt(max_price)}` : sql``}
-          GROUP BY el.id, u.name
-          ORDER BY ${
-            sort === 'price_asc' ? sql`el.price ASC` :
-            sort === 'price_desc' ? sql`el.price DESC` :
-            sort === 'newest' ? sql`el.created_at DESC` :
-            sort === 'rating' ? sql`seller_rating DESC` :
-            sql`el.price ASC`
-          }
-          LIMIT ${parseInt(limit)} OFFSET ${offset}
-        `;
-      } else {
-        rows = await sql`
-          SELECT
-            el.*,
-            u.name AS seller_name,
-            COALESCE(AVG(r.rating), 0) AS seller_rating,
-            COUNT(DISTINCT r.id) AS seller_reviews
-          FROM email_listings el
-          JOIN users u ON u.id = el.seller_id
-          LEFT JOIN reviews r ON r.seller_id = el.seller_id
-          WHERE el.status = 'active'
-            ${min_price ? sql`AND el.price >= ${parseInt(min_price)}` : sql``}
-            ${max_price ? sql`AND el.price <= ${parseInt(max_price)}` : sql``}
-          GROUP BY el.id, u.name
-          ORDER BY ${
-            sort === 'price_asc' ? sql`el.price ASC` :
-            sort === 'price_desc' ? sql`el.price DESC` :
-            sort === 'newest' ? sql`el.created_at DESC` :
-            sort === 'rating' ? sql`seller_rating DESC` :
-            sql`el.price ASC`
-          }
-          LIMIT ${parseInt(limit)} OFFSET ${offset}
-        `;
+        whereClauses.push(`el.provider = $${paramIdx++}`);
+        params.push(provider);
+      }
+      if (min_price) {
+        whereClauses.push(`el.price >= $${paramIdx++}`);
+        params.push(parseInt(min_price));
+      }
+      if (max_price) {
+        whereClauses.push(`el.price <= $${paramIdx++}`);
+        params.push(parseInt(max_price));
+      }
+      if (search) {
+        whereClauses.push(`(el.address ILIKE $${paramIdx} OR u.name ILIKE $${paramIdx})`);
+        params.push(`%${search}%`);
+        paramIdx++;
       }
 
-      const [countRow] = await sql`SELECT COUNT(*) FROM email_listings WHERE status = 'active'`;
-      const total = parseInt(countRow.count as string);
+      const whereStr = whereClauses.join(' AND ');
+
+      const queryStr = `
+        SELECT
+          el.id, el.address, el.provider, el.age_label, el.price,
+          el.description, el.phone_verified, el.recovery_verified,
+          el.two_fa_verified, el.seller_id, el.status, el.warranty,
+          el.created_at,
+          u.name AS seller_name,
+          u.rating AS seller_rating,
+          u.review_count AS seller_reviews
+        FROM email_listings el
+        JOIN users u ON u.id = el.seller_id
+        WHERE ${whereStr}
+        ORDER BY ${orderBy}
+        LIMIT $${paramIdx++} OFFSET $${paramIdx++}
+      `;
+      params.push(limitNum, offset);
+
+      const countStr = `
+        SELECT COUNT(*) FROM email_listings el
+        JOIN users u ON u.id = el.seller_id
+        WHERE ${whereStr}
+      `;
+
+      const [rows, countRows] = await Promise.all([
+        db(queryStr, params as never[]),
+        db(countStr, params.slice(0, -2) as never[]),
+      ]);
+
+      const total = parseInt(String(countRows[0].count));
+
 
       const emails = rows.map(row => ({
         id: String(row.id),
-        address: row.masked_address as string,
+        address: row.address as string,
         provider: row.provider as string,
         age: row.age_label as string,
-        price: parseInt(row.price as string),
+        price: parseInt(String(row.price)),
         description: row.description as string,
         verifications: {
-          phone: row.verified_phone as boolean,
-          recovery: row.verified_recovery as boolean,
-          twoFa: row.verified_2fa as boolean,
+          phone: row.phone_verified as boolean,
+          recovery: row.recovery_verified as boolean,
+          twoFa: row.two_fa_verified as boolean,
         },
         sellerId: String(row.seller_id),
         sellerName: row.seller_name as string,
-        sellerRating: parseFloat(row.seller_rating as string),
-        sellerReviews: parseInt(row.seller_reviews as string),
+        sellerRating: parseFloat(String(row.seller_rating ?? 0)),
+        sellerReviews: parseInt(String(row.seller_reviews ?? 0)),
         status: row.status as string,
-        warranty: row.warranty_days ? `${row.warranty_days} hari` : '7 hari',
+        warranty: row.warranty as string ?? '7 hari',
         imageCount: 1,
       }));
 
@@ -90,7 +111,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method === 'POST') {
-    // Auth check
     const cookieHeader = req.headers.cookie || '';
     const sessionToken = cookieHeader
       .split(';')
@@ -101,22 +121,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!sessionToken) return res.status(401).json({ error: 'Unauthorized' });
 
     try {
-      const [session] = await sql`
-        SELECT user_id FROM sessions WHERE token = ${sessionToken} AND expires_at > NOW() LIMIT 1
-      `;
-      if (!session) return res.status(401).json({ error: 'Session expired' });
+      const sessions = await db(
+        `SELECT user_id FROM sessions WHERE token = $1 AND expires_at > NOW() LIMIT 1`,
+        [sessionToken]
+      );
+      if (!sessions.length) return res.status(401).json({ error: 'Session expired' });
 
-      const { masked_address, provider, age_label, price, description, verified_phone, verified_recovery, verified_2fa, warranty_days } = req.body;
+      const { address, provider, age_label, price, description, phone_verified, recovery_verified, two_fa_verified, warranty } = req.body;
+      const userId = sessions[0].user_id;
 
-      const [listing] = await sql`
-        INSERT INTO email_listings
-          (seller_id, masked_address, provider, age_label, price, description, verified_phone, verified_recovery, verified_2fa, warranty_days)
-        VALUES
-          (${session.user_id}, ${masked_address}, ${provider}, ${age_label}, ${price}, ${description}, ${verified_phone}, ${verified_recovery}, ${verified_2fa}, ${warranty_days})
-        RETURNING id
-      `;
+      const rows = await db(
+        `INSERT INTO email_listings
+          (seller_id, address, provider, age_label, price, description, phone_verified, recovery_verified, two_fa_verified, warranty)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         RETURNING id`,
+        [userId, address, provider, age_label, price, description, phone_verified, recovery_verified, two_fa_verified, warranty]
+      );
 
-      return res.status(201).json({ id: listing.id });
+      return res.status(201).json({ id: rows[0].id });
     } catch (error) {
       console.error('[emails POST]', error);
       return res.status(500).json({ error: 'Terjadi kesalahan server' });

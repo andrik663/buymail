@@ -15,7 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const [user] = await sql`
-      SELECT id, name, email, password_hash, role, avatar_url
+      SELECT id, name, email, password_hash, role, avatar
       FROM users
       WHERE email = ${email}
       LIMIT 1
@@ -49,7 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         name: user.name,
         email: user.email,
         role: user.role,
-        avatar: user.avatar_url,
+        avatar: user.avatar,
         isLoggedIn: true,
       },
     });

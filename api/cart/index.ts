@@ -21,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'GET') {
     const rows = await sql`
-      SELECT c.listing_id, el.masked_address, el.provider, el.price
+      SELECT c.listing_id, el.address, el.provider, el.price
       FROM cart c
       JOIN email_listings el ON el.id = c.listing_id
       WHERE c.user_id = ${userId}

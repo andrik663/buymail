@@ -54,26 +54,26 @@ export const emailsApi = {
     if (query.page) params.set('page', String(query.page));
     if (query.limit) params.set('limit', String(query.limit));
     return request<{ emails: Email[]; total: number; page: number; limit: number }>(
-      `/emails/index?${params.toString()}`
+      `/emails?${params.toString()}`
     );
   },
 };
 
 // Cart
 export const cartApi = {
-  get: () => request<{ items: { listing_id: string }[] }>('/cart/index'),
+  get: () => request<{ items: { listing_id: string }[] }>('/cart'),
   add: (listing_id: string) =>
-    request<{ success: boolean }>('/cart/index', {
+    request<{ success: boolean }>('/cart', {
       method: 'POST',
       body: JSON.stringify({ listing_id }),
     }),
   remove: (listing_id: string) =>
-    request<{ success: boolean }>('/cart/index', {
+    request<{ success: boolean }>('/cart', {
       method: 'DELETE',
       body: JSON.stringify({ listing_id }),
     }),
   clear: () =>
-    request<{ success: boolean }>('/cart/index', {
+    request<{ success: boolean }>('/cart', {
       method: 'DELETE',
       body: JSON.stringify({}),
     }),
@@ -81,14 +81,14 @@ export const cartApi = {
 
 // Wishlist
 export const wishlistApi = {
-  get: () => request<{ items: string[] }>('/wishlist/index'),
+  get: () => request<{ items: string[] }>('/wishlist'),
   add: (listing_id: string) =>
-    request<{ success: boolean }>('/wishlist/index', {
+    request<{ success: boolean }>('/wishlist', {
       method: 'POST',
       body: JSON.stringify({ listing_id }),
     }),
   remove: (listing_id: string) =>
-    request<{ success: boolean }>('/wishlist/index', {
+    request<{ success: boolean }>('/wishlist', {
       method: 'DELETE',
       body: JSON.stringify({ listing_id }),
     }),
